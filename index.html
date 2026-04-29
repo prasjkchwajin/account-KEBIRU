@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>教师联谊会财务系统 | 货币RM前置 | 显示密码 + 对方日期</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Noto Sans', sans-serif;
+        }
+
+        body {
+            background: #eef3ea;
+            margin: 0;
+            padding: 24px 16px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 登录页面样式 */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 70, 32, 0.94);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: all 0.3s;
+        }
+        .login-card {
+            background: white;
+            border-radius: 48px;
+            padding: 40px 32px;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.2);
+            animation: fadeInUp 0.3s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .login-card h1 {
+            color: #1e4620;
+            margin-bottom: 8px;
+            font-size: 1.8rem;
+        }
+        .login-card p {
+            color: #5a7952;
+            margin-bottom: 28px;
+            font-size: 0.9rem;
+        }
+        .input-group-login {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .login-input {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 60px;
+            border: 1px solid #cfe3cf;
+            font-size: 1rem;
+            letter-spacing: 2px;
+        }
+        .checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #2e5c2a;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+        .checkbox-label input {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+        }
+        .login-btn {
+            background: #2e7d32;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 12px;
+        }
+        .login-btn:hover { background: #1b5e20; }
+        .error-msg {
+            color: #c0392b;
+            font-size: 0.8rem;
+            margin-top: 12px;
+            min-height: 32px;
+        }
+        /* 主内容区域 */
+        .main-content {
+            display: none;
+            width: 100%;
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0, 32, 0, 0.08);
+            padding: 20px 24px;
+            margin-bottom: 28px;
+        }
+        .card-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #1e4620;
+            border-left: 6px solid #3c9e3a;
+            padding-left: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .badge {
+            background: #e9f5e9;
+            color: #2c6e2c;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .form-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+            margin-bottom: 16px;
+        }
+        .input-group {
+            flex: 1;
+            min-width: 140px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #2b4f2b;
+            margin-bottom: 6px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 20px;
+            border: 1px solid #cfe3cf;
+            background: white;
+            font-size: 0.95rem;
+        }
+        button {
+            background: #2e7d32;
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:hover { background: #1b5e20; transform: translateY(-1px); }
+        .btn-outline {
+            background: white;
+            border: 1px solid #2e7d32;
+            color: #2e7d32;
+        }
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .filter-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .filter-group input, .filter-group select { width: auto; max-width: 150px; }
+        .table-wrapper { overflow-x: auto; border-radius: 24px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: #eef5ea; padding: 12px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #c8e0c4; }
+        td { padding: 12px 8px; border-bottom: 1px solid #e2f0df; vertical-align: middle; }
+        .amount-in { color: #2b6e2f; font-weight: 600; }
+        .amount-out { color: #c0392b; font-weight: 600; }
+        .action-btn { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px 8px; width: auto; border-radius: 30px; }
+        .edit-btn { color: #2c6e2c; }
+        .delete-btn { color: #c0392b; }
+        .payment-badge { background: #f1f3f4; padding: 4px 8px; border-radius: 30px; font-size: 0.7rem; display: inline-block; }
+        /* 结算单左右分栏 */
+        .statement-modern {
+            background: #ffffff;
+            border: 1px solid #d4e2ca;
+            border-radius: 28px;
+            overflow: hidden;
+        }
+        .statement-header { text-align: center; padding: 20px 20px 12px; border-bottom: 2px solid #c8dfbc; background: #fafef7; }
+        .statement-header h2 { margin: 0; color: #1e4620; }
+        .statement-sub { color: #4a6741; font-size: 0.8rem; }
+        .statement-period { font-size: 0.75rem; color: #6f8f63; margin-top: 8px; }
+        .statement-split { display: flex; flex-wrap: wrap; border-top: 1px solid #e2eedb; }
+        .split-left, .split-right { flex: 1; min-width: 260px; }
+        .split-left { border-right: 1px solid #ddebd0; }
+        .split-header { padding: 14px 16px; font-weight: 700; font-size: 1.2rem; border-bottom: 1px solid #cde0c4; }
+        .split-left .split-header { color: #2b6e2f; background: #eef7ea; }
+        .split-right .split-header { color: #b13b2c; background: #fef2ef; }
+        .transaction-list { padding: 8px 0; }
+        .transaction-item { display: flex; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #f0f5eb; font-size: 0.85rem; }
+        .item-left { flex: 2; padding-right: 12px; }
+        .item-date { font-family: monospace; font-size: 0.7rem; color: #6f8e61; margin-bottom: 4px; }
+        .item-desc { font-weight: 500; }
+        .item-payment { font-size: 0.7rem; background: #f2f6ef; padding: 2px 8px; border-radius: 30px; display: inline-block; margin-top: 4px; }
+        .item-remark { font-size: 0.7rem; color: #8cae7c; margin-top: 4px; }
+        .item-right { text-align: right; font-weight: 600; white-space: nowrap; }
+        .amount-positive { color: #2b6e2f; }
+        .amount-negative { color: #c0392b; }
+        .split-footer { background: #fcfdfa; padding: 14px 16px; border-top: 2px solid #deecD5; font-weight: 700; display: flex; justify-content: space-between; }
+        .grand-total { background: #eef4e9; padding: 16px 20px; display: flex; justify-content: flex-end; gap: 32px; flex-wrap: wrap; font-weight: 700; border-top: 2px solid #c8dfbc; }
+        .print-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px; }
+        .modal {
+            display: none;
+            position: fixed;
+            top:0; left:0;
+            width:100%; height:100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content { background: white; border-radius: 32px; max-width: 600px; width: 90%; padding: 24px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+        footer { text-align: center; font-size: 0.7rem; color: #7f9a6e; margin-top: 20px; }
+        .empty-statement { text-align: center; padding: 40px; color: #8aa77d; }
+        @media print {
+            body { background: white; }
+            .no-print, .login-overlay, .modal, .filter-bar, .print-actions button, .action-btn { display: none !important; }
+            .main-content { display: block !important; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 登录页面（显示密码复选框） -->
+<div id="loginPanel" class="login-overlay">
+    <div class="login-card">
+        <h1>教师联谊会</h1>
+        <p>财务管理系统 · 安全访问</p>
+        <div class="input-group-login">
+            <input type="password" id="passwordInput" class="login-input" placeholder="请输入访问密码" autofocus>
+            <label class="checkbox-label">
+                <input type="checkbox" id="showPasswordCheckbox"> 显示密码
+            </label>
+        </div>
+        <button id="loginBtn" class="login-btn">进入系统</button>
+        <div id="loginError" class="error-msg"></div>
+        <div style="font-size:0.7rem; margin-top:20px; color:#8faa83;">默认密码: admin123</div>
+    </div>
+</div>
+
+<!-- 主系统内容 -->
+<div class="main-content" id="mainContent">
+<div class="container">
+    <!-- 录入卡片 -->
+    <div class="card no-print">
+        <div class="card-title">
+            <span>联谊会财务记账</span>
+            <span class="badge">含对方日期 · 左右凭证</span>
+        </div>
+        <div class="form-grid">
+            <div class="input-group"><label>发生日期</label><input type="date" id="transDate"></div>
+            <div class="input-group"><label>类型</label>
+                <select id="transType"><option value="in">收取 (收入)</option><option value="out">支出 (付款)</option></select>
+            </div>
+            <div class="input-group"><label>项目/摘要</label><input type="text" id="transDesc" placeholder="例: 会费/聚餐"></div>
+            <div class="input-group"><label>金额 (RM)</label><input type="number" id="transAmount" step="0.01" placeholder="0.00"></div>
+        </div>
+        <div class="form-grid">
+            <div class="input-group"><label>支付/收款方式</label>
+                <select id="paymentMethod"><option value="TNG">TNG eWallet</option><option value="银行转账">银行转账</option><option value="现金">现金支付</option></select>
+            </div>
+            <div class="input-group"><label>对方日期 (对方凭证日期)</label><input type="date" id="counterpartyDate" placeholder="对方单据日期"></div>
+            <div class="input-group"><label>备注</label><input type="text" id="remark" placeholder="对方姓名/单据号"></div>
+            <div class="input-group" style="flex:0.5"><button id="addBtn">添加记录</button></div>
+        </div>
+        <div style="font-size:0.7rem; color:#588157;">提示：「对方日期」用于记录对方收付款的原始日期，便于对账。货币单位: RM (林吉特)</div>
+    </div>
+
+    <!-- 明细表 -->
+    <div class="card no-print">
+        <div class="card-title">
+            <span>收支明细表 (支持修改/删除)</span>
+            <span class="badge" id="recordCount">0 条</span>
+        </div>
+        <div class="filter-bar">
+            <div class="filter-group">
+                <select id="filterType"><option value="all">全部流水</option><option value="in">仅收取</option><option value="out">仅支出</option></select>
+                <input type="text" id="searchKeyword" placeholder="摘要关键字">
+                <select id="filterPaymentMethod"><option value="all">全部支付方式</option><option value="TNG">TNG</option><option value="银行转账">银行转账</option><option value="现金">现金</option></select>
+                <button id="resetFilterBtn" class="btn-outline">重置筛选</button>
+            </div>
+            <button id="clearAllBtn" class="btn-outline" style="background:#fff3e0;">清空全部数据</button>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr><th>日期</th><th>类型</th><th>摘要</th><th>金额</th><th>支付方式</th><th>对方日期</th><th>备注</th><th>操作</th></tr>
+                </thead>
+                <tbody id="tableBody"><tr class="empty-row"><td colspan="8">暂无记录</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 左右分栏结算单 -->
+    <div class="card">
+        <div class="card-title">
+            <span>会计凭证式结算单 · 左收右支 (含对方日期)</span>
+            <span class="badge no-print">单位: RM</span>
+        </div>
+        <div class="statement-modern" id="modernStatement">
+            <div class="statement-header">
+                <h2>校内教师联谊会</h2>
+                <div class="statement-sub">收支结算凭证 · 含对方业务日期</div>
+                <div class="statement-period" id="statementDateRange"></div>
+            </div>
+            <div class="statement-split">
+                <div class="split-left">
+                    <div class="split-header">收取 (进款)</div>
+                    <div id="inListContainer" class="transaction-list"><div class="empty-statement">暂无收取记录</div></div>
+                    <div class="split-footer"><span>收取合计</span><span id="totalInAmount" class="amount-positive">RM 0.00</span></div>
+                </div>
+                <div class="split-right">
+                    <div class="split-header">支出 (付款)</div>
+                    <div id="outListContainer" class="transaction-list"><div class="empty-statement">暂无支出记录</div></div>
+                    <div class="split-footer"><span>支出合计</span><span id="totalOutAmount" class="amount-negative">RM 0.00</span></div>
+                </div>
+            </div>
+            <div class="grand-total">
+                <span>总收取: <strong id="grandTotalIn">RM 0.00</strong></span>
+                <span>总支出: <strong id="grandTotalOut">RM 0.00</strong></span>
+                <span>结余: <strong id="balanceTotal">RM 0.00</strong></span>
+            </div>
+            <div class="print-actions no-print">
+                <button id="printStatementBtn">打印结算单</button>
+                <button id="refreshStatementBtn" class="btn-outline">刷新结算单</button>
+            </div>
+        </div>
+    </div>
+    <footer>每次进入需密码，可勾选显示密码；每笔收支均可记录对方日期；货币格式: RM 金额</footer>
+</div>
+</div>
+
+<!-- 编辑模态框 -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3>修改收支记录</h3>
+        <div class="form-grid">
+            <div class="input-group"><label>发生日期</label><input type="date" id="editDate"></div>
+            <div class="input-group"><label>类型</label><select id="editType"><option value="in">收取</option><option value="out">支出</option></select></div>
+            <div class="input-group"><label>摘要</label><input type="text" id="editDesc"></div>
+            <div class="input-group"><label>金额 (RM)</label><input type="number" id="editAmount" step="0.01"></div>
+        </div>
+        <div class="form-grid">
+            <div class="input-group"><label>支付方式</label><select id="editPaymentMethod"><option value="TNG">TNG</option><option value="银行转账">银行转账</option><option value="现金">现金</option></select></div>
+            <div class="input-group"><label>对方日期</label><input type="date" id="editCounterpartyDate"></div>
+            <div class="input-group"><label>备注</label><input type="text" id="editRemark"></div>
+        </div>
+        <div class="modal-actions"><button id="cancelEditBtn" class="btn-outline">取消</button><button id="saveEditBtn">保存修改</button></div>
+    </div>
+</div>
+
+<script>
+    // ========== 密码配置 ==========
+    const PRESET_PASSWORD = "admin123";
+    let isLoggedIn = false;
+    
+    // DOM 元素
+    const loginPanel = document.getElementById("loginPanel");
+    const mainContent = document.getElementById("mainContent");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginBtn = document.getElementById("loginBtn");
+    const loginError = document.getElementById("loginError");
+    const showPasswordCheckbox = document.getElementById("showPasswordCheckbox");
+    
+    // 显示/隐藏密码 (复选框方式)
+    showPasswordCheckbox.addEventListener("change", function() {
+        passwordInput.type = this.checked ? "text" : "password";
+    });
+    
+    function attemptLogin() {
+        if (passwordInput.value === PRESET_PASSWORD) {
+            isLoggedIn = true;
+            loginPanel.style.display = "none";
+            mainContent.style.display = "block";
+            initFinanceSystem();
+        } else {
+            loginError.innerText = "密码错误，请重试";
+            passwordInput.value = "";
+            showPasswordCheckbox.checked = false;
+            passwordInput.type = "password";
+            passwordInput.focus();
+        }
+    }
+    loginBtn.addEventListener("click", attemptLogin);
+    passwordInput.addEventListener("keypress", (e) => { if(e.key === "Enter") attemptLogin(); });
+    
+    // ========== 财务核心 ==========
+    const STORAGE_KEY = "teachers_financial_v8_rm_prefix";
+    let transactions = [];
+    
+    // 全局格式化函数：将数字转为 RM 前置字符串
+    function formatRM(amount) {
+        return "RM " + amount.toFixed(2);
+    }
+    
+    function getTodayStr() {
+        let d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    
+    function loadData() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if(stored) {
+            try {
+                transactions = JSON.parse(stored);
+                transactions = transactions.map(t => ({ 
+                    ...t, 
+                    paymentMethod: t.paymentMethod || "现金", 
+                    remark: t.remark || "",
+                    counterpartyDate: t.counterpartyDate || ""
+                }));
+            } catch(e){ transactions = []; }
+        } else {
+            // 示例数据包含对方日期
+            transactions = [
+                { id: 8001, date: "2026-04-01", type: "in", description: "第一季度会费收入", amount: 2450, paymentMethod: "银行转账", counterpartyDate: "2026-03-28", remark: "王老师等12人" },
+                { id: 8002, date: "2026-04-10", type: "out", description: "教师节鲜花礼包", amount: 680.5, paymentMethod: "TNG", counterpartyDate: "2026-04-09", remark: "花店订单F2301" },
+                { id: 8003, date: "2026-04-18", type: "out", description: "联谊会茶歇茶点", amount: 420, paymentMethod: "现金", counterpartyDate: "2026-04-17", remark: "超市采购" },
+                { id: 8004, date: "2026-04-22", type: "in", description: "二手义卖捐赠", amount: 320, paymentMethod: "现金", counterpartyDate: "2026-04-20", remark: "张老师经手" },
+                { id: 8005, date: "2026-04-25", type: "out", description: "文体用品采购", amount: 195.3, paymentMethod: "银行转账", counterpartyDate: "2026-04-24", remark: "体育器材" },
+                { id: 8006, date: "2026-04-28", type: "in", description: "讲座赞助", amount: 800, paymentMethod: "TNG", counterpartyDate: "2026-04-27", remark: "校外企业" }
+            ];
+            saveData();
+        }
+    }
+    function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions)); }
+    function generateId() { return Date.now() + Math.floor(Math.random()*100000); }
+    
+    function addTransaction(date, type, desc, amount, payment, counterpartyDate, remark){
+        if(!date){ alert("请选择发生日期"); return false; }
+        if(!desc.trim()){ alert("请填写摘要"); return false; }
+        if(isNaN(amount) || amount<=0){ alert("金额必须为正数 (RM)"); return false; }
+        transactions.push({ 
+            id: generateId(), date, type, description: desc.trim(), amount: Number(amount), 
+            paymentMethod: payment, counterpartyDate: counterpartyDate || "", remark: remark.trim() 
+        });
+        saveData();
+        return true;
+    }
+    function updateRecord(id, fields){
+        let idx = transactions.findIndex(t=>t.id===id);
+        if(idx !== -1){ transactions[idx] = {...transactions[idx], ...fields}; saveData(); renderAll(); return true;}
+        return false;
+    }
+    function deleteRecord(id){ transactions = transactions.filter(t=>t.id!==id); saveData(); renderAll(); }
+    function clearAll(){ if(confirm("删除所有记录？")){ transactions = []; saveData(); renderAll(); } }
+    
+    let currentFilter="all", currentKeyword="", currentPayFilter="all";
+    function getFiltered(){
+        let f = [...transactions];
+        if(currentFilter !== "all") f = f.filter(t=>t.type===currentFilter);
+        if(currentKeyword.trim()){ let kw=currentKeyword.trim().toLowerCase(); f = f.filter(t=>t.description.toLowerCase().includes(kw)); }
+        if(currentPayFilter !== "all") f = f.filter(t=>t.paymentMethod === currentPayFilter);
+        f.sort((a,b)=> (a.date > b.date ? 1 : -1));
+        return f;
+    }
+    function escapeHtml(str){ if(!str) return ""; return str.replace(/[&<>]/g, m=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+    
+    function renderRecordsTable(){
+        let filtered = getFiltered();
+        let tbody = document.getElementById("tableBody");
+        document.getElementById("recordCount").innerText = transactions.length + " 条记录";
+        if(filtered.length===0){ tbody.innerHTML = '<tr class="empty-row"><td colspan="8">无匹配记录</td></tr>'; return; }
+        let html = "";
+        filtered.forEach(r=>{
+            let typeLabel = r.type==="in"?"收取":"支出";
+            let amountClass = r.type==="in"?"amount-in":"amount-out";
+            let sign = r.type==="in"?"+":"-";
+            let cpDate = r.counterpartyDate ? r.counterpartyDate : "—";
+            // 金额显示格式: RM 金额 (带符号前置)
+            let amountDisplay = `${sign} ${formatRM(r.amount)}`;
+            html += `<tr>
+                        <td>${r.date}</td>
+                        <td>${typeLabel}</td>
+                        <td>${escapeHtml(r.description)}</td>
+                        <td class="${amountClass}">${amountDisplay}</td>
+                        <td><span class="payment-badge">${escapeHtml(r.paymentMethod)}</span></td>
+                        <td>${cpDate}</td>
+                        <td>${escapeHtml(r.remark) || "—"}</td>
+                        <td><button class="action-btn edit-btn" data-id="${r.id}">修改</button><button class="action-btn delete-btn" data-id="${r.id}">删除</button></td>
+                      </tr>`;
+        });
+        tbody.innerHTML = html;
+        document.querySelectorAll('.edit-btn').forEach(btn=>btn.addEventListener('click',()=>{ openEditModal(parseInt(btn.dataset.id)); }));
+        document.querySelectorAll('.delete-btn').forEach(btn=>btn.addEventListener('click',()=>{ if(confirm("删除此记录？")) deleteRecord(parseInt(btn.dataset.id)); }));
+    }
+    
+    function renderModernStatement(){
+        let all = [...transactions];
+        all.sort((a,b)=> (a.date > b.date ? 1 : -1));
+        const inList = all.filter(t => t.type === "in");
+        const outList = all.filter(t => t.type === "out");
+        let totalIn = inList.reduce((s,i)=> s + i.amount, 0);
+        let totalOut = outList.reduce((s,i)=> s + i.amount, 0);
+        let balance = totalIn - totalOut;
+        
+        const inContainer = document.getElementById("inListContainer");
+        if(inList.length === 0) inContainer.innerHTML = '<div class="empty-statement">暂无收取记录</div>';
+        else {
+            let inHtml = "";
+            inList.forEach(item => {
+                let cpLine = item.counterpartyDate ? `<div style="font-size:0.7rem; color:#6c8562;">对方日期: ${item.counterpartyDate}</div>` : "";
+                inHtml += `<div class="transaction-item">
+                    <div class="item-left">
+                        <div class="item-date">发生日期: ${item.date}</div>
+                        <div class="item-desc">${escapeHtml(item.description)}</div>
+                        <div><span class="item-payment">${escapeHtml(item.paymentMethod)}</span></div>
+                        ${cpLine}
+                        ${item.remark ? `<div class="item-remark">备注: ${escapeHtml(item.remark)}</div>` : ''}
+                    </div>
+                    <div class="item-right amount-positive">+ ${formatRM(item.amount)}</div>
+                </div>`;
+            });
+            inContainer.innerHTML = inHtml;
+        }
+        const outContainer = document.getElementById("outListContainer");
+        if(outList.length === 0) outContainer.innerHTML = '<div class="empty-statement">暂无支出记录</div>';
+        else {
+            let outHtml = "";
+            outList.forEach(item => {
+                let cpLine = item.counterpartyDate ? `<div style="font-size:0.7rem; color:#6c8562;">对方日期: ${item.counterpartyDate}</div>` : "";
+                outHtml += `<div class="transaction-item">
+                    <div class="item-left">
+                        <div class="item-date">发生日期: ${item.date}</div>
+                        <div class="item-desc">${escapeHtml(item.description)}</div>
+                        <div><span class="item-payment">${escapeHtml(item.paymentMethod)}</span></div>
+                        ${cpLine}
+                        ${item.remark ? `<div class="item-remark">备注: ${escapeHtml(item.remark)}</div>` : ''}
+                    </div>
+                    <div class="item-right amount-negative">- ${formatRM(item.amount)}</div>
+                </div>`;
+            });
+            outContainer.innerHTML = outHtml;
+        }
+        
+        // 更新合计区域 (使用 RM 前置格式)
+        document.getElementById("totalInAmount").innerHTML = formatRM(totalIn);
+        document.getElementById("totalOutAmount").innerHTML = formatRM(totalOut);
+        document.getElementById("grandTotalIn").innerHTML = formatRM(totalIn);
+        document.getElementById("grandTotalOut").innerHTML = formatRM(totalOut);
+        let balanceColor = balance >=0 ? "#2b6e2f" : "#c0392b";
+        document.getElementById("balanceTotal").innerHTML = `<span style="color:${balanceColor}">${formatRM(balance)}</span>`;
+        
+        let dateRange = all.length ? `${all[0].date} 至 ${all[all.length-1].date}` : "暂无交易";
+        document.getElementById("statementDateRange").innerHTML = `账期: ${dateRange}  · 总笔数 ${all.length}`;
+    }
+    
+    function renderAll(){ renderRecordsTable(); renderModernStatement(); }
+    
+    let editingId = null;
+    function openEditModal(id){
+        let rec = transactions.find(t=>t.id===id);
+        if(!rec) return;
+        editingId = id;
+        document.getElementById("editDate").value = rec.date;
+        document.getElementById("editType").value = rec.type;
+        document.getElementById("editDesc").value = rec.description;
+        document.getElementById("editAmount").value = rec.amount;
+        document.getElementById("editPaymentMethod").value = rec.paymentMethod;
+        document.getElementById("editCounterpartyDate").value = rec.counterpartyDate || "";
+        document.getElementById("editRemark").value = rec.remark || "";
+        document.getElementById("editModal").style.display = "flex";
+    }
+    function closeModal(){ document.getElementById("editModal").style.display = "none"; editingId=null; }
+    function saveEdit(){
+        if(!editingId) return;
+        let newDate = document.getElementById("editDate").value;
+        let newType = document.getElementById("editType").value;
+        let newDesc = document.getElementById("editDesc").value.trim();
+        let newAmount = parseFloat(document.getElementById("editAmount").value);
+        let newPayment = document.getElementById("editPaymentMethod").value;
+        let newCpDate = document.getElementById("editCounterpartyDate").value;
+        let newRemark = document.getElementById("editRemark").value;
+        if(!newDate){ alert("发生日期不能为空"); return; }
+        if(!newDesc){ alert("摘要不能为空"); return; }
+        if(isNaN(newAmount) || newAmount<=0){ alert("金额必须大于0 (RM)"); return; }
+        updateRecord(editingId, { date:newDate, type:newType, description:newDesc, amount:newAmount, paymentMethod:newPayment, counterpartyDate:newCpDate, remark:newRemark });
+        closeModal();
+    }
+    
+    function initFinanceSystem(){
+        loadData();
+        document.getElementById("transDate").value = getTodayStr();
+        document.getElementById("counterpartyDate").value = "";
+        document.getElementById("addBtn").onclick = ()=>{
+            let date = document.getElementById("transDate").value;
+            let type = document.getElementById("transType").value;
+            let desc = document.getElementById("transDesc").value;
+            let amount = parseFloat(document.getElementById("transAmount").value);
+            let payment = document.getElementById("paymentMethod").value;
+            let cpDate = document.getElementById("counterpartyDate").value;
+            let remark = document.getElementById("remark").value;
+            if(addTransaction(date, type, desc, amount, payment, cpDate, remark)){
+                document.getElementById("transDesc").value = "";
+                document.getElementById("transAmount").value = "";
+                document.getElementById("remark").value = "";
+                document.getElementById("counterpartyDate").value = "";
+                renderAll();
+            }
+        };
+        document.getElementById("filterType").onchange = (e)=>{ currentFilter = e.target.value; renderRecordsTable(); };
+        document.getElementById("searchKeyword").oninput = (e)=>{ currentKeyword = e.target.value; renderRecordsTable(); };
+        document.getElementById("filterPaymentMethod").onchange = (e)=>{ currentPayFilter = e.target.value; renderRecordsTable(); };
+        document.getElementById("resetFilterBtn").onclick = ()=>{ currentFilter="all"; currentKeyword=""; currentPayFilter="all"; document.getElementById("filterType").value="all"; document.getElementById("searchKeyword").value=""; document.getElementById("filterPaymentMethod").value="all"; renderRecordsTable(); };
+        document.getElementById("clearAllBtn").onclick = clearAll;
+        document.getElementById("printStatementBtn").onclick = ()=>{ window.print(); };
+        document.getElementById("refreshStatementBtn").onclick = ()=>{ renderModernStatement(); alert("结算单已刷新"); };
+        document.getElementById("cancelEditBtn").onclick = closeModal;
+        document.getElementById("saveEditBtn").onclick = saveEdit;
+        window.onclick = (e)=>{ if(e.target === document.getElementById("editModal")) closeModal(); };
+        renderAll();
+    }
+    // 初始隐藏主内容
+    mainContent.style.display = "none";
+    loginPanel.style.display = "flex";
+</script>
+</body>
+</html>
