@@ -117,9 +117,6 @@
         .delete-ledger-btn:hover {
             background: rgba(192, 57, 43, 0.15);
         }
-        .ledger-item.active .delete-ledger-btn {
-            color: #ffb3a6;
-        }
         .add-ledger {
             background: white;
             border: 1px dashed #5f9e4b;
@@ -146,7 +143,7 @@
         .filter-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         .filter-group input, .filter-group select { width: auto; max-width: 140px; }
 
-        /* 收支明细表 - 固定高度滚动 */
+        /* 收支明细表 - 固定高度滚动（仅屏幕显示） */
         .table-container {
             max-height: 400px;
             overflow-y: auto;
@@ -166,7 +163,7 @@
         .delete-btn { color: #c0392b; }
         .payment-badge { background: #f1f3f4; padding: 4px 8px; border-radius: 30px; font-size: 0.7rem; display: inline-block; }
 
-        /* 结算单样式 */
+        /* 结算单样式 - 无高度限制（打印完整） */
         .statement-modern { background: #fff; border: 1px solid #d4e2ca; border-radius: 28px; overflow: hidden; }
         .statement-header { text-align: center; padding: 20px; border-bottom: 2px solid #c8dfbc; background: #fafef7; }
         .statement-header h2 { margin: 0; color: #1e4620; font-size: 1.3rem; }
@@ -178,7 +175,11 @@
         .split-header { padding: 12px 16px; font-weight: 700; font-size: 1rem; background: #f7fbf4; border-bottom: 1px solid #cde0c4; }
         .split-left .split-header { color: #2b6e2f; }
         .split-right .split-header { color: #b13b2c; }
-        .transaction-list { padding: 8px 0; max-height: 350px; overflow-y: auto; }
+        /* 关键修复：移除 max-height 限制，让内容完整显示 */
+        .transaction-list { 
+            padding: 8px 0; 
+            /* 不再限制高度，显示全部内容 */
+        }
         .transaction-item { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #f0f5eb; font-size: 0.8rem; }
         .item-left { flex: 2; }
         .item-date { font-size: 0.7rem; color: #6f8e61; }
@@ -199,44 +200,62 @@
         footer { text-align: center; font-size: 0.7rem; color: #7f9a6e; margin-top: 20px; padding-top: 8px; border-top: 1px solid #d4e2ca; }
         .empty-statement { text-align: center; padding: 30px; color: #8aa77d; }
         
-        /* 打印样式 - 只打印结算单，A4尺寸 */
+        /* ========== 打印样式 - 完整显示所有记录 ========== */
         @media print {
+            /* 隐藏所有不需要打印的元素 */
             body * {
                 visibility: hidden;
             }
+            /* 只显示结算单区域 */
             .statement-modern, .statement-modern * {
                 visibility: visible;
             }
             .statement-modern {
-                position: fixed;
+                position: relative;
                 top: 0;
                 left: 0;
-                right: 0;
                 margin: 0;
                 padding: 20px;
                 width: 100%;
-                border: none;
+                border: 1px solid #ccc;
                 box-shadow: none;
                 background: white;
+                page-break-after: avoid;
+                page-break-inside: avoid;
             }
-            .print-actions, .no-print {
+            /* 隐藏打印按钮 */
+            .print-actions, .no-print, .ledger-bar, .filter-bar, .action-btn, .modal, .card-title .badge, footer {
                 display: none !important;
             }
+            /* 确保所有交易记录完整显示，不被截断 */
             .transaction-list {
-                max-height: none;
-                overflow: visible;
+                max-height: none !important;
+                overflow: visible !important;
+                display: block !important;
             }
+            .transaction-item {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .statement-split {
+                display: flex;
+                flex-wrap: wrap;
+                page-break-inside: avoid;
+            }
+            .split-left, .split-right {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            /* A4 纸张设置 */
             @page {
                 size: A4;
                 margin: 1.5cm;
             }
-            .split-left, .split-right {
-                page-break-inside: avoid;
-            }
-            .statement-header h2 { font-size: 18pt; }
-            .split-header { font-size: 12pt; background: #f0f0f0; }
+            /* 确保多页时每页都有表头效果 */
+            .statement-header h2 { font-size: 16pt; }
+            .split-header { font-size: 11pt; background: #f0f0f0; }
             .transaction-item { font-size: 9pt; }
-            .split-footer, .grand-total { font-size: 10pt; }
+            .split-footer, .grand-total { font-size: 10pt; font-weight: bold; }
         }
     </style>
 </head>
@@ -368,7 +387,7 @@
     
     let appData = { ledgers: [], transactions: [] };
     let currentLedgerId = null;
-    const STORAGE_KEY = "multi_ledger_finance_v5";
+    const STORAGE_KEY = "multi_ledger_finance_v6";
     
     function loadAppData() {
         const stored = localStorage.getItem(STORAGE_KEY);
