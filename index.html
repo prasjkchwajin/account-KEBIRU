@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>教师联谊会财务系统 | 多项目管理</title>
+    <title>教师联谊会财务系统</title>
     <style>
         * {
             box-sizing: border-box;
@@ -120,10 +120,6 @@
         .ledger-item.active .delete-ledger-btn {
             color: #ffb3a6;
         }
-        .ledger-item.active .delete-ledger-btn:hover {
-            background: rgba(255,255,255,0.2);
-            color: white;
-        }
         .add-ledger {
             background: white;
             border: 1px dashed #5f9e4b;
@@ -150,9 +146,18 @@
         .filter-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         .filter-group input, .filter-group select { width: auto; max-width: 140px; }
 
-        .table-wrapper { overflow-x: auto; border-radius: 24px; }
+        /* 收支明细表 - 固定高度滚动 */
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 24px;
+            border: 1px solid #e2f0df;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+        }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th { background: #eef5ea; padding: 12px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #c8e0c4; }
+        th { background: #eef5ea; padding: 12px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid #c8e0c4; position: sticky; top: 0; background-color: #eef5ea; z-index: 10; }
         td { padding: 10px 8px; border-bottom: 1px solid #e2f0df; vertical-align: middle; }
         .amount-in { color: #2b6e2f; font-weight: 600; }
         .amount-out { color: #c0392b; font-weight: 600; }
@@ -161,7 +166,7 @@
         .delete-btn { color: #c0392b; }
         .payment-badge { background: #f1f3f4; padding: 4px 8px; border-radius: 30px; font-size: 0.7rem; display: inline-block; }
 
-        /* 结算单样式 - 专业版 */
+        /* 结算单样式 */
         .statement-modern { background: #fff; border: 1px solid #d4e2ca; border-radius: 28px; overflow: hidden; }
         .statement-header { text-align: center; padding: 20px; border-bottom: 2px solid #c8dfbc; background: #fafef7; }
         .statement-header h2 { margin: 0; color: #1e4620; font-size: 1.3rem; }
@@ -173,7 +178,7 @@
         .split-header { padding: 12px 16px; font-weight: 700; font-size: 1rem; background: #f7fbf4; border-bottom: 1px solid #cde0c4; }
         .split-left .split-header { color: #2b6e2f; }
         .split-right .split-header { color: #b13b2c; }
-        .transaction-list { padding: 8px 0; max-height: 400px; overflow-y: auto; }
+        .transaction-list { padding: 8px 0; max-height: 350px; overflow-y: auto; }
         .transaction-item { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #f0f5eb; font-size: 0.8rem; }
         .item-left { flex: 2; }
         .item-date { font-size: 0.7rem; color: #6f8e61; }
@@ -194,7 +199,45 @@
         footer { text-align: center; font-size: 0.7rem; color: #7f9a6e; margin-top: 20px; padding-top: 8px; border-top: 1px solid #d4e2ca; }
         .empty-statement { text-align: center; padding: 30px; color: #8aa77d; }
         
-        @media print { .no-print, .login-overlay, .modal, .filter-bar, .print-actions button, .action-btn, .ledger-bar .ledger-item, .add-ledger { display: none !important; } }
+        /* 打印样式 - 只打印结算单，A4尺寸 */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .statement-modern, .statement-modern * {
+                visibility: visible;
+            }
+            .statement-modern {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                margin: 0;
+                padding: 20px;
+                width: 100%;
+                border: none;
+                box-shadow: none;
+                background: white;
+            }
+            .print-actions, .no-print {
+                display: none !important;
+            }
+            .transaction-list {
+                max-height: none;
+                overflow: visible;
+            }
+            @page {
+                size: A4;
+                margin: 1.5cm;
+            }
+            .split-left, .split-right {
+                page-break-inside: avoid;
+            }
+            .statement-header h2 { font-size: 18pt; }
+            .split-header { font-size: 12pt; background: #f0f0f0; }
+            .transaction-item { font-size: 9pt; }
+            .split-footer, .grand-total { font-size: 10pt; }
+        }
     </style>
 </head>
 <body>
@@ -216,7 +259,7 @@
 <div class="main-content" id="mainContent">
 <div class="container">
     <!-- 项目切换栏 -->
-    <div class="card no-print" style="padding-bottom: 12px;">
+    <div class="card no-print">
         <div class="ledger-bar">
             <div class="ledger-selector" id="ledgerList"></div>
             <button id="addLedgerBtn" class="add-ledger">+ 新建项目</button>
@@ -258,21 +301,26 @@
             </div>
             <button id="clearCurrentLedgerBtn" class="btn-outline" style="background:#fff3e0;">清空当前项目</button>
         </div>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th>日期</th><th>类型</th><th>摘要</th><th>金额 (RM)</th><th>支付方式</th><th>对方日期</th><th>备注</th><th>操作</th></tr></thead>
-                <tbody id="tableBody"><tr class="empty-row"><td colspan="8">暂无记录</td></tr></tbody>
-            </table>
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>日期</th><th>类型</th><th>摘要</th><th>金额 (RM)</th><th>支付方式</th><th>对方日期</th><th>备注</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="tableBody"><tr class="empty-row"><td colspan="8">暂无记录</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- 结算单 Statement - 专业命名 -->
+    <!-- 结算单 Statement -->
     <div class="card">
         <div class="card-title">
             <span>收支结算单 (Statement)</span>
             <span class="badge no-print">单位: RM</span>
         </div>
-        <div class="statement-modern">
+        <div class="statement-modern" id="statementContainer">
             <div class="statement-header">
                 <h2 id="statementTitle">教师联谊会</h2>
                 <p>收支明细结算凭证</p>
@@ -296,13 +344,13 @@
                 <span>结余 (Balance): <strong id="balanceTotal">RM 0.00</strong></span>
             </div>
             <div class="print-actions no-print">
-                <button id="printStatementBtn">打印结算单</button>
+                <button id="printStatementBtn">🖨️ 打印结算单</button>
                 <button id="refreshStatementBtn" class="btn-outline">刷新结算单</button>
             </div>
         </div>
     </div>
     
-    <footer>hakmilik@KEBIRUSJKCHWAJIN</footer>
+    <footer class="no-print">hakmilik@KEBIRUSJKCHWAJIN</footer>
 </div>
 </div>
 
@@ -316,14 +364,11 @@
 </div>
 
 <script>
-    // 密码
     const PRESET_PASSWORD = "admin123";
     
-    // 数据结构
     let appData = { ledgers: [], transactions: [] };
     let currentLedgerId = null;
-    
-    const STORAGE_KEY = "multi_ledger_finance_v3";
+    const STORAGE_KEY = "multi_ledger_finance_v5";
     
     function loadAppData() {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -346,25 +391,18 @@
     }
     
     function initDefaultData() {
-        const mainLedger = { id: "ledger_main", name: "教师联谊会" };
-        const farewellLedger = { id: "ledger_farewell", name: "欢送会2026" };
-        appData.ledgers = [mainLedger, farewellLedger];
+        appData.ledgers = [{ id: "ledger_main", name: "教师联谊会" }];
         appData.transactions = [
             { id: "t1", ledgerId: "ledger_main", date: "2026-04-01", type: "in", description: "第一季度会费", amount: 2450, paymentMethod: "银行转账", counterpartyDate: "2026-03-28", remark: "王老师等12人" },
             { id: "t2", ledgerId: "ledger_main", date: "2026-04-10", type: "out", description: "教师节鲜花", amount: 680.5, paymentMethod: "TNG", counterpartyDate: "2026-04-09", remark: "花店" },
-            { id: "t3", ledgerId: "ledger_main", date: "2026-04-18", type: "out", description: "茶歇茶点", amount: 420, paymentMethod: "现金", counterpartyDate: "2026-04-17", remark: "超市" },
-            { id: "t4", ledgerId: "ledger_farewell", date: "2026-05-15", type: "in", description: "欢送会报名费", amount: 800, paymentMethod: "TNG", counterpartyDate: "2026-05-14", remark: "20人参加" },
-            { id: "t5", ledgerId: "ledger_farewell", date: "2026-05-18", type: "out", description: "聚餐订金", amount: 500, paymentMethod: "现金", counterpartyDate: "2026-05-17", remark: "餐厅" },
+            { id: "t3", ledgerId: "ledger_main", date: "2026-04-18", type: "out", description: "茶歇茶点", amount: 420, paymentMethod: "现金", counterpartyDate: "2026-04-17", remark: "超市" }
         ];
         saveAppData();
     }
     
     function saveAppData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
     function generateId() { return Date.now() + "_" + Math.random().toString(36).substr(2, 6); }
-    
-    function getCurrentTransactions() {
-        return appData.transactions.filter(t => t.ledgerId === currentLedgerId);
-    }
+    function getCurrentTransactions() { return appData.transactions.filter(t => t.ledgerId === currentLedgerId); }
     
     function addTransaction(ledgerId, date, type, desc, amount, payment, cpDate, remark) {
         if(!date){ alert("请选择日期"); return false; }
@@ -385,29 +423,20 @@
     }
     function deleteTransaction(id) { appData.transactions = appData.transactions.filter(t=>t.id!==id); saveAppData(); renderAll(); }
     function clearCurrentLedger() { 
-        if(confirm(`⚠️ 警告：确定要清空当前项目“${appData.ledgers.find(l=>l.id===currentLedgerId)?.name}”的所有收支记录吗？此操作不可撤销！`)) {
+        if(confirm(`⚠️ 确定要清空当前项目“${appData.ledgers.find(l=>l.id===currentLedgerId)?.name}”的所有记录吗？`)) {
             appData.transactions = appData.transactions.filter(t=>t.ledgerId !== currentLedgerId); 
             saveAppData(); 
             renderAll();
         }
     }
     
-    // 删除项目（带警告提示）
     function deleteLedger(ledgerId, ledgerName) {
-        if(appData.ledgers.length === 1) {
-            alert("至少需要保留一个项目，无法删除最后一个项目。");
-            return;
-        }
-        if(confirm(`⚠️ 警告：您确定要删除项目“${ledgerName}”吗？\n\n删除后，该项目下的所有收支记录也会被永久删除！此操作不可撤销。`)) {
-            // 删除该项目下的所有交易记录
+        if(appData.ledgers.length === 1) { alert("至少需要保留一个项目"); return; }
+        if(confirm(`⚠️ 确定删除项目“${ledgerName}”吗？该项目下的所有记录也会被删除！`)) {
             appData.transactions = appData.transactions.filter(t => t.ledgerId !== ledgerId);
-            // 删除项目
             appData.ledgers = appData.ledgers.filter(l => l.id !== ledgerId);
             saveAppData();
-            // 如果删除的是当前项目，切换到第一个项目
-            if(currentLedgerId === ledgerId) {
-                currentLedgerId = appData.ledgers[0].id;
-            }
+            if(currentLedgerId === ledgerId) currentLedgerId = appData.ledgers[0].id;
             renderAll();
         }
     }
@@ -443,25 +472,14 @@
         let html = "";
         appData.ledgers.forEach(ledger => {
             const activeClass = currentLedgerId === ledger.id ? "active" : "";
-            html += `
-                <div class="ledger-item ${activeClass}">
-                    <button class="ledger-name" data-id="${ledger.id}">${escapeHtml(ledger.name)}</button>
-                    <button class="delete-ledger-btn" data-id="${ledger.id}" data-name="${escapeHtml(ledger.name)}" title="删除项目">✕</button>
-                </div>
-            `;
+            html += `<div class="ledger-item ${activeClass}">
+                        <button class="ledger-name" data-id="${ledger.id}">${escapeHtml(ledger.name)}</button>
+                        <button class="delete-ledger-btn" data-id="${ledger.id}" data-name="${escapeHtml(ledger.name)}">✕</button>
+                    </div>`;
         });
         container.innerHTML = html;
-        // 切换项目事件
-        document.querySelectorAll('.ledger-name').forEach(btn => {
-            btn.addEventListener('click', () => switchLedger(btn.dataset.id));
-        });
-        // 删除项目事件
-        document.querySelectorAll('.delete-ledger-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteLedger(btn.dataset.id, btn.dataset.name);
-            });
-        });
+        document.querySelectorAll('.ledger-name').forEach(btn => btn.addEventListener('click', () => switchLedger(btn.dataset.id)));
+        document.querySelectorAll('.delete-ledger-btn').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); deleteLedger(btn.dataset.id, btn.dataset.name); }));
         const currentLedgerObj = appData.ledgers.find(l=>l.id===currentLedgerId);
         document.getElementById("currentLedgerName").innerHTML = `当前: ${escapeHtml(currentLedgerObj?.name || "")}`;
         document.getElementById("statementTitle").innerHTML = escapeHtml(currentLedgerObj?.name || "账本");
@@ -471,7 +489,7 @@
         let filtered = getFilteredTransactions();
         let tbody = document.getElementById("tableBody");
         document.getElementById("recordCount").innerText = getCurrentTransactions().length + " 条";
-        if(filtered.length===0){ tbody.innerHTML = '<tr class="empty-row"><td colspan="8">无匹配记录</td></tr>'; return; }
+        if(filtered.length===0){ tbody.innerHTML = '<tr class="empty-row"><td colspan="8">暂无记录</td></tr>'; return; }
         let html = "";
         filtered.forEach(r=>{
             let typeLabel = r.type==="in"?"收取":"支出";
@@ -487,11 +505,11 @@
                         <td>${cpDate}</td>
                         <td>${escapeHtml(r.remark) || "—"}</td>
                         <td><button class="action-btn edit-btn" data-id="${r.id}">修改</button><button class="action-btn delete-btn" data-id="${r.id}">删除</button></td>
-                    </tr>`;
+                      </tr>`;
         });
         tbody.innerHTML = html;
         document.querySelectorAll('.edit-btn').forEach(btn=>btn.addEventListener('click',()=>{ openEditModal(btn.dataset.id); }));
-        document.querySelectorAll('.delete-btn').forEach(btn=>btn.addEventListener('click',()=>{ if(confirm("删除此记录？")){ deleteTransaction(btn.dataset.id); renderAll(); } }));
+        document.querySelectorAll('.delete-btn').forEach(btn=>btn.addEventListener('click',()=>{ if(confirm("删除此记录？")){ deleteTransaction(btn.dataset.id); } }));
     }
     
     function renderStatement() {
@@ -501,6 +519,7 @@
         const outList = all.filter(t => t.type === "out");
         let totalIn = inList.reduce((s,i)=> s+i.amount,0);
         let totalOut = outList.reduce((s,i)=> s+i.amount,0);
+        
         const inContainer = document.getElementById("inListContainer");
         if(inList.length===0) inContainer.innerHTML = '<div class="empty-statement">暂无收取记录</div>';
         else {
@@ -564,7 +583,7 @@
         closeModal(); renderAll();
     }
     
-    // 登录逻辑
+    // 登录
     const loginPanel = document.getElementById("loginPanel"), mainContent = document.getElementById("mainContent");
     const passwordInput = document.getElementById("passwordInput"), loginBtn = document.getElementById("loginBtn");
     const loginError = document.getElementById("loginError"), showPwd = document.getElementById("showPasswordCheckbox");
@@ -614,7 +633,6 @@
         document.getElementById("transDate").value = new Date().toISOString().slice(0,10);
     }
     
-    // 添加编辑弹窗HTML
     const editModalHtml = `<div id="editModal" class="modal"><div class="modal-content"><h3>修改收支记录</h3><div class="form-grid"><div class="input-group"><label>日期</label><input type="date" id="editDate"></div><div class="input-group"><label>类型</label><select id="editType"><option value="in">收取</option><option value="out">支出</option></select></div><div class="input-group"><label>摘要</label><input type="text" id="editDesc"></div><div class="input-group"><label>金额 (RM)</label><input type="number" id="editAmount" step="0.01"></div></div><div class="form-grid"><div class="input-group"><label>支付方式</label><select id="editPaymentMethod"><option value="TNG">TNG</option><option value="银行转账">银行转账</option><option value="现金">现金</option></select></div><div class="input-group"><label>对方日期</label><input type="date" id="editCounterpartyDate"></div><div class="input-group"><label>备注</label><input type="text" id="editRemark"></div></div><div class="modal-actions"><button id="cancelEditBtn" class="btn-outline">取消</button><button id="saveEditBtn">保存修改</button></div></div></div>`;
     document.body.insertAdjacentHTML('beforeend', editModalHtml);
     document.getElementById("transDate").value = new Date().toISOString().slice(0,10);
