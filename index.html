@@ -163,7 +163,7 @@
         .delete-btn { color: #c0392b; }
         .payment-badge { background: #f1f3f4; padding: 4px 8px; border-radius: 30px; font-size: 0.7rem; display: inline-block; }
 
-        /* 结算单样式 - 无高度限制（打印完整） */
+        /* 结算单样式 */
         .statement-modern { background: #fff; border: 1px solid #d4e2ca; border-radius: 28px; overflow: hidden; }
         .statement-header { text-align: center; padding: 20px; border-bottom: 2px solid #c8dfbc; background: #fafef7; }
         .statement-header h2 { margin: 0; color: #1e4620; font-size: 1.3rem; }
@@ -175,10 +175,11 @@
         .split-header { padding: 12px 16px; font-weight: 700; font-size: 1rem; background: #f7fbf4; border-bottom: 1px solid #cde0c4; }
         .split-left .split-header { color: #2b6e2f; }
         .split-right .split-header { color: #b13b2c; }
-        /* 关键修复：移除 max-height 限制，让内容完整显示 */
+        /* 屏幕显示时限制高度，便于滚动 */
         .transaction-list { 
             padding: 8px 0; 
-            /* 不再限制高度，显示全部内容 */
+            max-height: 350px;
+            overflow-y: auto;
         }
         .transaction-item { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #f0f5eb; font-size: 0.8rem; }
         .item-left { flex: 2; }
@@ -220,14 +221,12 @@
                 border: 1px solid #ccc;
                 box-shadow: none;
                 background: white;
-                page-break-after: avoid;
-                page-break-inside: avoid;
             }
-            /* 隐藏打印按钮 */
+            /* 隐藏打印按钮和其他操作元素 */
             .print-actions, .no-print, .ledger-bar, .filter-bar, .action-btn, .modal, .card-title .badge, footer {
                 display: none !important;
             }
-            /* 确保所有交易记录完整显示，不被截断 */
+            /* 关键修复：打印时移除高度限制，显示全部内容 */
             .transaction-list {
                 max-height: none !important;
                 overflow: visible !important;
@@ -251,7 +250,7 @@
                 size: A4;
                 margin: 1.5cm;
             }
-            /* 确保多页时每页都有表头效果 */
+            /* 打印时字体调整 */
             .statement-header h2 { font-size: 16pt; }
             .split-header { font-size: 11pt; background: #f0f0f0; }
             .transaction-item { font-size: 9pt; }
@@ -387,7 +386,7 @@
     
     let appData = { ledgers: [], transactions: [] };
     let currentLedgerId = null;
-    const STORAGE_KEY = "multi_ledger_finance_v6";
+    const STORAGE_KEY = "multi_ledger_finance_v7";
     
     function loadAppData() {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -516,14 +515,14 @@
             let sign = r.type==="in"?"+":"-";
             let cpDate = r.counterpartyDate || "—";
             html += `<tr>
-                        <td>${r.date}</td>
-                        <td>${typeLabel}</td>
-                        <td>${escapeHtml(r.description)}</td>
+                         <td>${r.date}</td>
+                         <td>${typeLabel}</td>
+                         <td>${escapeHtml(r.description)}</td>
                         <td class="${amountClass}">${sign} ${formatRM(r.amount)}</td>
-                        <td><span class="payment-badge">${escapeHtml(r.paymentMethod)}</span></td>
-                        <td>${cpDate}</td>
-                        <td>${escapeHtml(r.remark) || "—"}</td>
-                        <td><button class="action-btn edit-btn" data-id="${r.id}">修改</button><button class="action-btn delete-btn" data-id="${r.id}">删除</button></td>
+                         <td><span class="payment-badge">${escapeHtml(r.paymentMethod)}</span></td>
+                         <td>${cpDate}</td>
+                         <td>${escapeHtml(r.remark) || "—"}</td>
+                         <td><button class="action-btn edit-btn" data-id="${r.id}">修改</button><button class="action-btn delete-btn" data-id="${r.id}">删除</button></td>
                       </tr>`;
         });
         tbody.innerHTML = html;
